@@ -210,8 +210,8 @@ class _TrainConfigScreenState extends ConsumerState<TrainConfigScreen> {
               _config.endRange.toDouble(),
             ),
             min: 1,
-            max: 100,
-            divisions: 99,
+            max: 1000,
+            divisions: 999,
             activeColor: AppTheme.sunnyOrange,
             inactiveColor: AppTheme.sunnyOrange.withValues(alpha: 0.3),
             labels: RangeLabels(

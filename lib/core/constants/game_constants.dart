@@ -10,8 +10,12 @@ class GameConstants {
   static const String range1to20 = '1-20';
   static const String range20to50 = '20-50';
   static const String range50to100 = '50-100';
+  static const String range100to500 = '100-500';
+  static const String range500to1000 = '500-1000';
   static const String range1to50 = '1-50';
   static const String range1to100 = '1-100';
+  static const String range1to500 = '1-500';
+  static const String range1to1000 = '1-1000';
   static const String rangeMixed = 'Mixed';
 
   static const List<String> balloonRanges = [
@@ -19,6 +23,8 @@ class GameConstants {
     range1to20,
     range20to50,
     range50to100,
+    range100to500,
+    range500to1000,
     rangeMixed,
   ];
 
@@ -27,6 +33,8 @@ class GameConstants {
     range1to20,
     range1to50,
     range1to100,
+    range1to500,
+    range1to1000,
   ];
 
   // Balloon spawn rates
@@ -47,8 +55,10 @@ class GameConstants {
   // Scoring for Balloon Pop based on number range
   static int getPointsForNumber(int number) {
     if (number >= 1 && number <= 10) return 1;
-    if (number >= 20 && number <= 50) return 2;
-    if (number >= 50 && number <= 100) return 3;
+    if (number >= 11 && number <= 50) return 2;
+    if (number >= 51 && number <= 100) return 3;
+    if (number >= 101 && number <= 500) return 4;
+    if (number >= 501 && number <= 1000) return 5;
     return 1;
   }
 

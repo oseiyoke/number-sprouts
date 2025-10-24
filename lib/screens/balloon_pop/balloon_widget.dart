@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import '../../core/theme/app_theme.dart';
 import 'balloon_game_controller.dart';
 import 'balloon_painter.dart';
+import 'balloon_render_box.dart';
 
 /// A single balloon widget that floats upward
 class BalloonWidget extends StatefulWidget {
@@ -30,8 +31,8 @@ class _BalloonWidgetState extends State<BalloonWidget> {
     if (widget.isPopped) {
       // Show confetti pop animation
       return SizedBox(
-        width: 100,
-        height: 120,
+        width: 140,
+        height: 160,
         child: _buildConfettiExplosion(),
       );
     }
@@ -49,16 +50,16 @@ class _BalloonWidgetState extends State<BalloonWidget> {
     ];
     final color = colors[widget.balloon.number % colors.length];
 
-    Widget balloonWidget = GestureDetector(
+    Widget balloonWidget = BalloonHitTestWidget(
       onTap: widget.onTap,
       child: SizedBox(
-        width: 100,
-        height: 140,
+        width: 140,
+        height: 180,
         child: Stack(
           children: [
             // Custom painted balloon
             CustomPaint(
-              size: const Size(100, 120),
+              size: const Size(140, 160),
               painter: BalloonPainter(
                 color: color,
                 isPopping: widget.isPopped,
@@ -66,7 +67,7 @@ class _BalloonWidgetState extends State<BalloonWidget> {
             ),
             // Number on balloon
             Positioned(
-              top: 30,
+              top: 40,
               left: 0,
               right: 0,
               child: Center(
@@ -99,19 +100,19 @@ class _BalloonWidgetState extends State<BalloonWidget> {
     return Stack(
       children: List.generate(12, (index) {
         final angle = (index * 30.0) * (math.pi / 180);
-        final distance = 40.0 + (index % 3) * 15.0;
+        final distance = 56.0 + (index % 3) * 21.0; // Scaled by 1.4x (140/100)
         
         return Positioned(
-          left: 50,
-          top: 50,
+          left: 70, // Scaled by 1.4x (70 = 50 * 1.4)
+          top: 70,  // Scaled by 1.4x
           child: Transform.translate(
             offset: Offset(
               math.cos(angle) * distance,
               math.sin(angle) * distance,
             ),
             child: Container(
-              width: 8,
-              height: 8,
+              width: 11,  // Scaled by 1.4x (11 ≈ 8 * 1.4)
+              height: 11,
               decoration: BoxDecoration(
                 color: _getConfettiColor(index),
                 shape: index % 2 == 0 ? BoxShape.circle : BoxShape.rectangle,

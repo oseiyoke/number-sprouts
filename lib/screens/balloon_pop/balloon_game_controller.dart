@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/game_config.dart';
 import '../../core/constants/game_constants.dart';
 import '../../core/utils/number_generator.dart';
+import 'spatial_grid.dart';
 
 /// Represents a single balloon in the game
 class Balloon {
@@ -72,11 +73,20 @@ class BalloonGameController extends StateNotifier<BalloonGameState> {
   Timer? _spawnTimer;
   Timer? _balloonUpdateTimer;
   final Random _random = Random();
+  final SpatialGrid _spatialGrid = SpatialGrid();
+  
+  // Constants for collision detection and spawn management
+  static const double _minSeparationDistance = 0.15; // 15% of screen
+  static const int _maxRetryAttempts = 5;
+  static const double _maxBalloonDensity = 15.0; // Maximum balloons for density calculation
 
   BalloonGameController(this.config) : super(const BalloonGameState());
 
   /// Start the game
   void startGame() {
+    // Clear spatial grid
+    _spatialGrid.clear();
+    
     state = BalloonGameState(
       score: 0,
       targetNumber: NumberGenerator.generateNumber(config.startRange, config.endRange),
@@ -117,47 +127,103 @@ class BalloonGameController extends StateNotifier<BalloonGameState> {
     }
   }
 
-  /// Spawn multiple balloons (3-6) with weighted probability for target numbers
-  /// Ensures at least 1 in 4 balloons is the target number
+  /// Spawn multiple balloons with dynamic count based on screen density
+  /// Uses collision detection to prevent overlapping
   void _spawnBalloon() {
-    final count = 3 + _random.nextInt(4); // Spawn 3-6 balloons
+    // Calculate current screen density
+    final currentDensity = state.balloons.length / _maxBalloonDensity;
+    
+    // Determine spawn count based on density
+    int spawnCount;
+    if (currentDensity > 0.7) {
+      // High density: spawn fewer balloons (1-2)
+      spawnCount = 1 + _random.nextInt(2);
+    } else if (currentDensity < 0.3) {
+      // Low density: spawn more balloons (4-6)
+      spawnCount = 4 + _random.nextInt(3);
+    } else {
+      // Medium density: spawn moderate amount (2-4)
+      spawnCount = 2 + _random.nextInt(3);
+    }
+    
     final newBalloons = <Balloon>[];
     
-    for (int i = 0; i < count; i++) {
+    for (int i = 0; i < spawnCount; i++) {
       // 35% chance (slightly more than 1 in 4) of spawning target number
       final shouldSpawnTarget = _random.nextDouble() < 0.35;
       final number = shouldSpawnTarget 
           ? state.targetNumber
           : NumberGenerator.generateNumber(config.startRange, config.endRange);
       
-      // Generate unique position for each balloon
-      final leftPosition = 0.1 + (_random.nextDouble() * 0.75); // Keep away from edges
+      // Try to find a valid position without collision
+      double? leftPosition;
+      double? bottomPosition;
+      
+      for (int attempt = 0; attempt < _maxRetryAttempts; attempt++) {
+        final testLeft = 0.1 + (_random.nextDouble() * 0.75); // Keep away from edges
+        final testBottom = -0.05 - (i * 0.05); // Slight vertical stagger
+        
+        // Check for collision with existing balloons
+        if (!_spatialGrid.hasCollision(testLeft, testBottom, _minSeparationDistance)) {
+          leftPosition = testLeft;
+          bottomPosition = testBottom;
+          break;
+        }
+      }
+      
+      // Skip this balloon if no valid position found after max attempts
+      if (leftPosition == null || bottomPosition == null) {
+        continue;
+      }
       
       final balloon = Balloon(
         id: '${DateTime.now().millisecondsSinceEpoch}_$i',
         number: number,
         left: leftPosition,
-        bottom: -0.05 - (i * 0.1), // Stagger vertical position slightly
+        bottom: bottomPosition,
       );
       
+      // Add to spatial grid
+      _spatialGrid.addBalloon(balloon.id, balloon.left, balloon.bottom);
       newBalloons.add(balloon);
     }
 
-    state = state.copyWith(
-      balloons: [...state.balloons, ...newBalloons],
-    );
+    if (newBalloons.isNotEmpty) {
+      state = state.copyWith(
+        balloons: [...state.balloons, ...newBalloons],
+      );
+    }
   }
 
   /// Update balloon positions (move them up)
   void _updateBalloons() {
+    final balloonsToRemove = <String>[];
+    
     final updatedBalloons = state.balloons
         .where((balloon) => !balloon.isPopped) // Keep popped balloons temporarily
         .map((balloon) {
           final newBottom = balloon.bottom + 0.01; // Rise speed
-          return balloon.copyWith(bottom: newBottom);
+          final updatedBalloon = balloon.copyWith(bottom: newBottom);
+          
+          // Update position in spatial grid
+          _spatialGrid.updateBalloon(updatedBalloon.id, updatedBalloon.left, updatedBalloon.bottom);
+          
+          return updatedBalloon;
         })
-        .where((balloon) => balloon.bottom < 1.2) // Remove off-screen balloons
+        .where((balloon) {
+          // Remove off-screen balloons (changed threshold from 1.2 to 1.0)
+          if (balloon.bottom >= 1.0) {
+            balloonsToRemove.add(balloon.id);
+            return false;
+          }
+          return true;
+        })
         .toList();
+    
+    // Remove off-screen balloons from spatial grid
+    for (final balloonId in balloonsToRemove) {
+      _spatialGrid.removeBalloon(balloonId);
+    }
     
     // Add back popped balloons (they don't move)
     final poppedBalloons = state.balloons.where((b) => b.isPopped).toList();
@@ -172,6 +238,9 @@ class BalloonGameController extends StateNotifier<BalloonGameState> {
       // Correct! Add points
       final points = GameConstants.getPointsForNumber(number);
       final newScore = state.score + points;
+      
+      // Remove from spatial grid immediately
+      _spatialGrid.removeBalloon(balloonId);
       
       // Mark balloon as popped (don't remove immediately)
       final updatedBalloons = state.balloons.map((b) {

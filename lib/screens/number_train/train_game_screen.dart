@@ -430,16 +430,7 @@ class _TrainGameScreenState extends ConsumerState<TrainGameScreen> {
                       carType: _getCarType(i),
                       isPlaced: true,
                     )
-                  : Center(
-                      child: Text(
-                        '${i + 1}',
-                        style: TextStyle(
-                          fontSize: 20,
-                          color: Colors.grey[400],
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
+                  : const SizedBox.shrink(),
             );
           },
         ),

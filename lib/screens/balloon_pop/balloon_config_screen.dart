@@ -234,8 +234,8 @@ class _BalloonConfigScreenState extends ConsumerState<BalloonConfigScreen> {
               _config.endRange.toDouble(),
             ),
             min: 1,
-            max: 100,
-            divisions: 99,
+            max: 1000,
+            divisions: 999,
             activeColor: AppTheme.skyBlue,
             inactiveColor: AppTheme.skyBlue.withOpacity(0.3),
             labels: RangeLabels(
